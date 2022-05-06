@@ -2,6 +2,7 @@
 
 class IPFSHlsMultiChunk {
   constructor(config) {
+    this.multiChunkReq = 5;
     this._abortFlag = [ false ];
     this.ipfs = config.ipfs
     this.hash = config.ipfsHash
@@ -55,7 +56,7 @@ class IPFSHlsMultiChunk {
   }
 
   loadInternal() {
-    const { stats, context, callbacks } = this
+    const { multiChunkReq, stats, context, callbacks } = this
 
     stats.tfirst = Math.max(performance.now(), stats.trequest)
     stats.loaded = 0
@@ -71,7 +72,7 @@ class IPFSHlsMultiChunk {
     if (Number.isFinite(context.rangeStart)) {
         options.offset = context.rangeStart;
         if (Number.isFinite(context.rangeEnd)) {
-	    options.length = context.rangeEnd - context.rangeStart;
+          options.length = context.rangeEnd - context.rangeStart;
         }
     }
 
@@ -79,7 +80,8 @@ class IPFSHlsMultiChunk {
     //                    before default HLS loads the chunk one by one.
     //                    However, the chunks need to be arranged for playback sequentially.
     //                    on testing now ...
-    if (filename === "master1.ts" || filename === "master2.ts" || filename === "master3.ts" || filename === "master4.ts") {
+    if (filename === "master2.ts" || filename === "master3.ts" || filename === "master4.ts") {
+      // ignore received chunks when it requests the video chunks
       const data = (context.responseType === 'arraybuffer') ? res : buf2str(res)
       stats.loaded = stats.total = data.length
       stats.tload = Math.max(stats.tfirst, performance.now())
@@ -87,46 +89,18 @@ class IPFSHlsMultiChunk {
       callbacks.onSuccess(response, stats, context)
     }
 
-    if (filename === "master1.ts") {
-      let chunk = "master1.ts";
-      this._abortFlag[0] = false;
-      getFile(this.ipfs, this.hash, chunk, options, this.debug, this._abortFlag).then(res => {
-        const data = (context.responseType === 'arraybuffer') ? res : buf2str(res)
-        stats.loaded = stats.total = data.length
-        stats.tload = Math.max(stats.tfirst, performance.now())
-        const response = { url: context.url, data: data }
-        callbacks.onSuccess(response, stats, context)
-      }, console.error)
-
-      chunk = "master2.ts";
-      this._abortFlag[0] = false;
-      getFile(this.ipfs, this.hash, chunk, options, this.debug, this._abortFlag).then(res => {
-        const data = (context.responseType === 'arraybuffer') ? res : buf2str(res)
-        stats.loaded = stats.total = data.length
-        stats.tload = Math.max(stats.tfirst, performance.now())
-        const response = { url: context.url, data: data }
-        callbacks.onSuccess(response, stats, context)
-      }, console.error)
-
-      chunk = "master3.ts";
-      this._abortFlag[0] = false;
-      getFile(this.ipfs, this.hash, chunk, options, this.debug, this._abortFlag).then(res => {
-        const data = (context.responseType === 'arraybuffer') ? res : buf2str(res)
-        stats.loaded = stats.total = data.length
-        stats.tload = Math.max(stats.tfirst, performance.now())
-        const response = { url: context.url, data: data }
-        callbacks.onSuccess(response, stats, context)
-      }, console.error)
-
-      chunk = "master4.ts";
-      this._abortFlag[0] = false;
-      getFile(this.ipfs, this.hash, chunk, options, this.debug, this._abortFlag).then(res => {
-        const data = (context.responseType === 'arraybuffer') ? res : buf2str(res)
-        stats.loaded = stats.total = data.length
-        stats.tload = Math.max(stats.tfirst, performance.now())
-        const response = { url: context.url, data: data }
-        callbacks.onSuccess(response, stats, context)
-      }, console.error)
+    if (filename === 'master1.ts') {
+      for (var i=0; i<multiChunkReq; i++) {
+        let chunk = `master${i+1}.ts`;
+        this._abortFlag[0] = false;
+        getFile(this.ipfs, this.hash, chunk, options, this.debug, this._abortFlag).then(res => {
+          const data = (context.responseType === 'arraybuffer') ? res : buf2str(res);
+          stats.loaded = stats.total = data.length;
+          stats.tload = Math.max(stats,tfirst, performance.now());
+          const response = { url: context.url, data: data }
+          callbacks.onSuccess(response, stats, context)
+        }, console.error);
+      }
     }
 
     if(filename.split(".")[1] === "m3u8" && this.m3u8provider !== null) {
@@ -185,7 +159,7 @@ function buf2str(buf) {
 }
 
 async function cat(cid, options, ipfs, debug, abortFlag) {
-  let start = new Date();
+  let start = new Date()
   const parts = []
   let length = 0, offset = 0
 
@@ -205,7 +179,7 @@ async function cat(cid, options, ipfs, debug, abortFlag) {
   }
 
   let end = new Date();
-  console.log(`📥 ${n} IPFS cat latency: ${end-start}ms`);
+  console.log(`📥 ${n} IPFS cat latency: ${end-start}ms`)
   debug(`Received data for file '${cid}' size: ${value.length} in ${parts.length} blocks`)
   return value
 }
