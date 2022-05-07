@@ -158,6 +158,9 @@ function buf2str(buf) {
   return new TextDecoder().decode(buf)
 }
 
+// cat runs IPFS cat in browser. The browser will retrieve chunks from IPFS preload
+// nodes that relay the chunks because IPFS node running on browser doesn't support
+// direct connection with IPFS network.
 async function cat(cid, options, ipfs, debug, abortFlag) {
   let start = new Date()
   const parts = []
