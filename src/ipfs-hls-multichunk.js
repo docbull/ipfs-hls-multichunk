@@ -166,6 +166,8 @@ async function cat(cid, options, ipfs, debug, abortFlag) {
   const parts = []
   let length = 0, offset = 0
 
+  // Run IPFS cat within IPFS node in the browser, and it pushs the data in the buffer
+  // to playback the video.
   for await (const buf of ipfs.cat(cid, options)) {
     parts.push(buf)
     length += buf.length
